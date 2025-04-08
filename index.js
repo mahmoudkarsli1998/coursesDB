@@ -7,7 +7,7 @@ const { MongoClient } = require('mongodb');
 
 const mongos = require('mongoose');
 require('dotenv').config();
-
+const httpStatusText = require('./utils/httpStatusTexts');
 // Get the connection string from .env file
 const url = process.env.MONGODB_URI;
 const client = new MongoClient(url); 
@@ -58,12 +58,20 @@ const baseUrl = '/api/courses/';
 
 
 const courseRouter = require('./routes/app.router');
+// // Global MiddleWare for not found Routes
+// app.all('*',(req,res,next)=>{
+//   return res.status(404).json({status:httpStatusText.ERROR , message:'this resourse invalid'});
+// });
+// Global MiddleWare for Error Handler
+app.use((error,req,res,next)=>{
+  return res.status(404).json({status:httpStatusText.ERROR , message:next(error.message)});
+});
 
 
 app.use('/api/courses/', courseRouter);
 
  
 //---------- Listen to Server --------------------- //
-app.listen(6002, () => {
-  console.log("listening on port 60002");
+app.listen(6003, () => {
+  console.log("listening on port 60003");
 });
