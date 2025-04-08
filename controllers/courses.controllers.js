@@ -1,125 +1,92 @@
-const { MongoClient ,ObjectId} = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 require('dotenv').config();
 
 const Course = require('../models/course.model');
+const httpStatusText = require('../utils/httpStatusTexts');
+const asyncWrapper = require('../middleware/asyncwrapper');
+const appError = require('../utils/appError');
 const url = process.env.MONGODB_URI;
 const client = new MongoClient(url);
+const { body, validationResult } = require("express-validator");
 
 // Get all courses
-const getAllCourses = async (req, res) => {
-  try {
-    // await client.connect();
-    // const db = client.db('codezone');
-    // const collection = db.collection('courses');
-    
-    // const courses = await collection.find().toArray();
-    // res.status(200).json(courses);
-    const courses = await Course.find();
-    res.status(200).json(courses);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  } finally {
-    await client.close();
+const getAllCourses = asyncWrapper(async (req, res, next) => {
+  const query = req.query;
+  const limit = query.limit || 10;
+  const page = query.page || 1;
+  const skip = (page-1)*limit;
+  
+  const courses = await Course.find({}, {"__v":false}).limit(limit).skip(skip);
+  if (!courses) {
+    return next(appError.create("this resourse invalid", 400, "ERROR"));
   }
-};
+  
+  res.status(200).json({status: httpStatusText.SUCCESS , data: {courses}});
+});
 
 // Get a single course by ID
-const getCourseById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    // await client.connect();
-    // const db = client.db('codezone');
-    // const collection = db.collection('courses');
-    
-    const course = await Course.findById(id);
-    
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
-    }
-    
-    res.status(200).json(course);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  } finally {
-    await client.close();
+const getCourseById = asyncWrapper(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+  
+  if (!course) {
+    return next(appError.create("this resourse invalid", 400, "ERROR"));
   }
-};
+  
+  res.status(200).json({status: httpStatusText.SUCCESS, data: {course}});
+});
 
 // Create a new course
-const createCourse = async (req, res) => {
-  try {
-    // const { title, price } = req.body;
-    // await client.connect();
-    // const db = client.db('codezone');
-    // const collection = db.collection('courses');
-    
-    // const result = await collection.insertOne({ title, price });
-    // res.status(201).json({ id: result.insertedId, title, price });
-
-    const newCourse = new Course(req.body);
-     await newCourse.save();
-     res.status(201).json(newCourse);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  } finally {
-    await client.close();
+const createCourse = asyncWrapper(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(appError.create("this resourse invalid", 400, "ERROR"));
   }
-};
+  
+  try {
+    const newCourse = new Course(req.body);
+    await newCourse.save();
+    res.status(201).json({status: httpStatusText.SUCCESS, data: {course: newCourse}});
+  } catch (err) {
+    return next(appError.create("this resourse invalid", 400, httpStatusText.ERROR));
+  }
+});
 
 // Update a course
-// Update a course
-const updateCourse = async (req, res) => {
+const updateCourse = asyncWrapper(async (req, res, next) => {
   try {
-    const { id } = req.params;
-    
     const updatedCourse = await Course.updateOne(
-      { _id: id },
+      { _id: req.params.id },
       { $set: { ...req.body } }
     );
     
     if (updatedCourse.matchedCount === 0) {
-      return res.status(404).json({ message: 'Course not found' });
+      return next(appError.create("this resourse invalid", 400, httpStatusText.ERROR));
     }
     
-    return res.status(200).json({ 
+    res.status(200).json({ 
+      status: httpStatusText.SUCCESS,
       message: 'Course updated successfully', 
       modifiedCount: updatedCourse.modifiedCount 
     });
-  } catch (error) {
-    console.error("Update error:", error);
-    res.status(500).json({ message: error.message });
-  } finally {
-    if (client) {
-      await client.close();
-    }
+  } catch (err) {
+    return next(appError.create("this resourse invalid", 400, httpStatusText.ERROR));
   }
-};
+});
 
 // Delete a course
-const deleteCourse = async (req, res) => {
+const deleteCourse = asyncWrapper(async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const deletedCourse = await Course.deleteOne(
-      { _id: id },
-      
-    );
-    // await client.connect();
-    // const db = client.db('codezone');
-    // const collection = db.collection('courses');
+    const deletedCourse = await Course.deleteOne({ _id: req.params.id });
     
-    // const result = await collection.deleteOne({ _id: new ObjectId(id) });
-    
-    if (result.deletedCourse === 0) {
-      return res.status(404).json({ message: 'Course not found' });
+    if (deletedCourse.deletedCount === 0) {
+      return next(appError.create("this resourse invalid", 400, httpStatusText.ERROR));
     }
     
-  res.status(200).json({ success:true ,  msg: deletedCourse});
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  } finally {
-    await client.close();
+    res.status(200).json({ status: httpStatusText.SUCCESS, data: null });
+  } catch (err) {
+    return next(appError.create("this resourse invalid", 400, httpStatusText.ERROR));
   }
-};
+});
 
 module.exports = {
   getAllCourses,
