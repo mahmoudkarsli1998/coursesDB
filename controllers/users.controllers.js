@@ -1,9 +1,10 @@
 const User = require('../models/user.model');
 const httpStatusText = require('../utils/httpStatusTexts');
+const AppError = require('../utils/appError');
+
 const generateJWT = require('../utils/generate.JWT');
 
 const asyncWrapper = require('../middleware/asyncwrapper');
-const AppError = require('../utils/appError');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -43,7 +44,7 @@ const registerUser = asyncWrapper(async (req,res  ,next) => {
 
     // generate JWT token
     // const token = await jwt.sign({email:newUser.email , id:newUser._id}, process.env.JWT_SECRET_KEY, {expiresIn: '1h'});
-    const token =await generateJWT({email:newUser.email , id:newUser._id});
+    const token =await generateJWT({email:newUser.email , id:newUser._id , role:newUser.role});
 
     console.log(token);
     newUser.token = token;
@@ -68,7 +69,7 @@ const loginUser = asyncWrapper(async(req,res,next) => {
 
     if(user && matchedPassword){
 
-        const token = await generateJWT({email:user.email , id:user._id});
+        const token = await generateJWT({email:user.email , id:user._id , token:user.token , role:user.role});
 
         res.status(200).json({status: httpStatusText.SUCCESS, data: {token:token}});
     }else{
