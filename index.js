@@ -8,7 +8,7 @@ const mongos = require('mongoose');
 require('dotenv').config();
 const httpStatusText = require('./utils/httpStatusTexts'); // your custom status texts like { ERROR: 'error', SUCCESS: 'success' }
 const AppError = require('./utils/appError');
-
+const path = require('path');
 // MongoDB connection (example)
 const url = process.env.MONGODB_URI;
 mongos.connect(url).then(() => {
@@ -21,6 +21,7 @@ const usersRouter = require('./routes/users.router');
 
 app.use('/api/courses/', courseRouter);
 app.use('/api/users/', usersRouter);
+app.use('/uploads',express.static(path.join(__dirname, 'uploads'))); // Serve static files from the public directory
 
 // Global Error-Handling Middleware
 // This middleware will catch errors forwarded by next(error) from anywhere in your app
