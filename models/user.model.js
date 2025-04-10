@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 require('dotenv').config();
+const userRoles = require('../utils/userRoles');
+
 
 const userSchema = new mongoose.Schema({
     name:{
@@ -20,8 +22,8 @@ const userSchema = new mongoose.Schema({
     },
     role:{
         type:String,
-        enum:['admin','user'],
-        default:'user',
+        enum:[userRoles.ADMIN , userRoles.USER , userRoles.GUEST],
+        default:userRoles.USER,
         
     },
     createdAt:{
@@ -30,7 +32,11 @@ const userSchema = new mongoose.Schema({
     },
     token:{
         type:String,
-        default:null
+        default:String
+    },
+    avatar:{
+        type:String,
+        default:'uploads/profile.png'
     }
 });
 module.exports = mongoose.model('User',userSchema);
